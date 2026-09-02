@@ -3,12 +3,13 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { deleteDocumentAction, replaceImageAction } from "@/app/admin/actions";
 import { qrDownloadDataUrl, qrPreviewDataUrl } from "@/lib/qr";
+import { buildPublicUrl } from "@/lib/site";
 import { ACCEPT_ATTRIBUTE, checkFileBasics } from "@/lib/validation";
 import { Button, ErrorText } from "@/components/admin/ui";
 import type { AdminDocument } from "@/types/document";
 
 export function DocumentCard({ doc }: { doc: AdminDocument }) {
-  const publicUrl = `https://docverif.vercel.app/v/${encodeURIComponent(doc.verification_code)}`;
+  const [publicUrl, setPublicUrl] = useState(doc.public_url);
   const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [replaceState, replaceAction, replacing] = useActionState(replaceImageAction, null);
@@ -20,13 +21,20 @@ export function DocumentCard({ doc }: { doc: AdminDocument }) {
 
   useEffect(() => {
     let cancelled = false;
-    qrPreviewDataUrl(publicUrl).then((url) => {
+
+    // Recalcule le lien depuis le domaine réellement ouvert dans le navigateur.
+    // Ainsi, un changement de domaine met automatiquement à jour le lien et le QR.
+    const currentPublicUrl = buildPublicUrl(doc.verification_code);
+    setPublicUrl(currentPublicUrl);
+
+    qrPreviewDataUrl(currentPublicUrl).then((url) => {
       if (!cancelled) setQrPreview(url);
     });
+
     return () => {
       cancelled = true;
     };
-  }, [publicUrl]);
+  }, [doc.verification_code]);
 
   async function copyLink() {
     try {

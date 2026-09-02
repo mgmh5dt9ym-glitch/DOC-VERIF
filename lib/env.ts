@@ -26,15 +26,34 @@ export function getSupabaseServiceRoleKey(): string {
 }
 
 /**
- * Retourne toujours uniquement l'origine du site, sans chemin.
- * Ex.: https://docverif.vercel.app/admin/login -> https://docverif.vercel.app
+ * URL publique configurée côté serveur.
+ * Aucun domaine de production n'est codé en dur.
  */
 export function getSiteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL || "https://docverif.vercel.app";
-
-  try {
-    return new URL(raw).origin;
-  } catch {
-    return "https://docverif.vercel.app";
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) {
+    try {
+      const withProtocol = /^https?:\/\//i.test(configured)
+        ? configured
+        : `https://${configured}`;
+      return new URL(withProtocol).origin;
+    } catch {
+      // Continue vers le fallback Vercel/local.
+    }
   }
+
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  if (vercelHost) {
+    try {
+      const withProtocol = /^https?:\/\//i.test(vercelHost)
+        ? vercelHost
+        : `https://${vercelHost}`;
+      return new URL(withProtocol).origin;
+    } catch {
+      // Continue vers localhost.
+    }
+  }
+
+  return "http://localhost:3000";
 }
