@@ -1,8 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createClient, getSessionUser } from "@/lib/supabase/server";
+import {
+  checkAdminPassword,
+  createAdminSession,
+  destroyAdminSession,
+  verifyAdminSession,
+} from "@/lib/admin-auth";
+import { getLockoutSeconds, registerFailure, registerSuccess } from "@/lib/login-rate-limit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateVerificationCode } from "@/lib/codes";
 import { STORAGE_BUCKET } from "@/lib/site";
@@ -11,42 +18,59 @@ import type { ActionResult } from "@/types/document";
 
 /* ---------- Authentification ---------- */
 
+async function clientIp(): Promise<string> {
+  const h = await headers();
+  return (
+    h.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    h.get("x-real-ip") ||
+    "unknown"
+  );
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function loginAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const ip = await clientIp();
 
-  if (!email || !password) {
-    return { ok: false, error: "E-mail et mot de passe requis." };
+  const locked = getLockoutSeconds(ip);
+  if (locked > 0) {
+    return {
+      ok: false,
+      error: `Trop de tentatives. Réessayez dans ${Math.ceil(locked / 60)} min.`,
+    };
   }
 
-  let supabase;
+  let valid = false;
   try {
-    supabase = await createClient();
+    valid = password.length > 0 && checkAdminPassword(password);
   } catch {
-    return { ok: false, error: "Connexion à Supabase impossible. Vérifiez les variables d'environnement." };
+    return { ok: false, error: "Configuration serveur incomplète (ADMIN_PASSWORD / ADMIN_SESSION_SECRET)." };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) {
-    return { ok: false, error: "Identifiants incorrects." };
+  if (!valid) {
+    await sleep(registerFailure(ip));
+    return { ok: false, error: "Mot de passe incorrect." };
   }
+
+  registerSuccess(ip);
+  await createAdminSession();
   redirect("/admin");
 }
 
 export async function logoutAction(): Promise<void> {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  await destroyAdminSession();
   redirect("/admin/login");
 }
 
 /* ---------- Helpers ---------- */
 
+/** Chaque action sensible revérifie la session, indépendamment du proxy. */
 async function requireAdmin(): Promise<void> {
-  const user = await getSessionUser();
-  if (!user) throw new Error("Non autorisé.");
+  if (!(await verifyAdminSession())) throw new Error("Non autorisé.");
 }
 
 function friendlyError(e: unknown): string {

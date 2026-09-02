@@ -1,53 +1,34 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE_NAME, verifySessionToken } from "@/lib/admin-session-token";
 
 /**
- * Proxy Next.js (anciennement middleware) :
- * - rafraîchit la session Supabase ;
- * - bloque /admin si l'utilisateur n'est pas connecté ;
- * - renvoie un admin déjà connecté hors de /admin/login.
+ * Première barrière pour /admin : vérifie le cookie de session signé.
+ * Les pages et Server Actions revérifient ensuite côté serveur
+ * (lib/admin-auth.ts → requireAdmin), le proxy n'est pas la seule protection.
  */
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    // Configuration absente : on refuse l'accès admin plutôt que de planter.
-    return NextResponse.redirect(new URL("/admin/login?error=config", request.url));
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options),
-        );
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const { pathname } = request.nextUrl;
   const isLoginPage = pathname === "/admin/login";
 
-  if (!user && !isLoginPage) {
-    return NextResponse.redirect(new URL("/admin/login", request.url));
-  }
-  if (user && isLoginPage) {
-    return NextResponse.redirect(new URL("/admin", request.url));
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+
+  let authenticated = false;
+  if (secret && token) {
+    try {
+      authenticated = await verifySessionToken(token, secret);
+    } catch {
+      authenticated = false;
+    }
   }
 
-  return response;
+  if (!authenticated && !isLoginPage) {
+    return NextResponse.redirect(new URL("/admin/login", request.url));
+  }
+  if (authenticated && isLoginPage) {
+    return NextResponse.redirect(new URL("/admin", request.url));
+  }
+  return NextResponse.next();
 }
 
 export const config = {

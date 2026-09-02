@@ -1,3 +1,4 @@
+import { requireAdmin } from "@/lib/admin-auth";
 import { listDocumentsForAdmin } from "@/lib/documents";
 import { logoutAction } from "@/app/admin/actions";
 import { UploadForm } from "@/components/admin/UploadForm";
@@ -8,6 +9,9 @@ export const metadata = { title: "Documents — Admin" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  // Vérification serveur de la session avant tout chargement de données.
+  await requireAdmin();
+
   let documents: AdminDocument[] = [];
   let loadError: string | null = null;
 
@@ -33,7 +37,7 @@ export default async function AdminPage() {
             type="submit"
             className="rounded-md px-3 py-1.5 text-sm text-ink-soft transition-colors hover:bg-white hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
           >
-            Se déconnecter
+            Déconnexion
           </button>
         </form>
       </header>

@@ -52,6 +52,9 @@ alter table public.documents enable row level security;
 
 revoke all on table public.documents from anon, authenticated;
 
+-- Note : Supabase Auth n'est pas utilisé. L'administration est protégée
+-- par ADMIN_PASSWORD / ADMIN_SESSION_SECRET côté serveur (voir README).
+
 -- 5. Storage : bucket privé "documents" -----------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

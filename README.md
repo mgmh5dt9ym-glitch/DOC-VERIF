@@ -10,7 +10,8 @@ document.
 
 - Next.js 16 (App Router, Server Components, Server Actions, `proxy.ts`)
 - TypeScript, Tailwind CSS 4
-- Supabase (Auth, Database, Storage privé + URL signées)
+- Supabase (Database + Storage privé avec URL signées)
+- Admin protégé par mot de passe unique (cookie de session signé HMAC, sans Supabase Auth)
 - `qrcode` pour la génération des QR (PNG 1000 × 1000, fond transparent)
 - Déploiement Vercel
 
@@ -19,8 +20,8 @@ document.
 | Route          | Rôle                                                              |
 | -------------- | ----------------------------------------------------------------- |
 | `/`            | Redirige vers `/admin`                                            |
-| `/admin/login` | Connexion (Supabase Auth, e-mail + mot de passe)                  |
-| `/admin`       | Gestion des documents (protégé par `proxy.ts`)                    |
+| `/admin/login` | Connexion par mot de passe (`ADMIN_PASSWORD`)                    |
+| `/admin`       | Gestion des documents (protégé par `proxy.ts` + `requireAdmin`)   |
 | `/v/[code]`    | Page publique : affiche uniquement l'image, sinon 404 propre      |
 
 ## 1. Configuration Supabase
@@ -35,14 +36,11 @@ document.
    *Public bucket* désactivé, *File size limit* 15 MB, *Allowed MIME types*
    `image/jpeg, image/png, image/webp`. Ne créez aucune policy Storage :
    l'accès se fait uniquement par URL signée côté serveur.
-4. **Authentication → Providers → Email** : laissez activé. Désactivez
-   *Enable email signups* (Sign ups) pour qu'aucun inconnu ne puisse créer un
-   compte.
-5. **Authentication → Users → Add user → Create new user** : saisissez
-   votre e-mail et un mot de passe fort, cochez *Auto Confirm User*. Ce sont
-   vos identifiants admin.
-6. **Project Settings → API** : notez `Project URL`, `anon public` et
+4. **Project Settings → API** : notez `Project URL`, `anon public` et
    `service_role` (secret).
+
+Aucun utilisateur Supabase Auth n'est nécessaire : l'admin se connecte avec
+`ADMIN_PASSWORD`.
 
 ### Sécurité (déjà en place)
 
@@ -58,7 +56,17 @@ document.
   fichier (magic bytes). Un fichier arbitraire renommé `.jpg` est refusé.
 - `SUPABASE_SERVICE_ROLE_KEY` n'est lue que dans des modules marqués
   `server-only` ; le build échoue si un composant client l'importe.
-- `/admin` bloqué par `proxy.ts` sans session valide.
+- Connexion admin : mot de passe comparé côté serveur en temps constant
+  (`timingSafeEqual` sur SHA-256). Il n'est jamais envoyé au navigateur ni
+  stocké dans le cookie.
+- Session : jeton `{ exp, nonce }` signé HMAC-SHA256 avec
+  `ADMIN_SESSION_SECRET`, cookie `admin_session` HTTP-only, `Secure` en
+  production, `SameSite=Lax`, `Path=/`, 7 jours.
+- Triple vérification : `proxy.ts` (avant la route), `requireAdmin()` dans
+  les pages, et `verifyAdminSession()` dans chaque Server Action et dans la
+  lecture de la liste privée.
+- Anti brute force : délai progressif après chaque échec (0,5 s → 3 s) et
+  blocage 15 min après 5 échecs par IP (en mémoire, par instance).
 
 ## 2. Lancer en local
 
@@ -82,6 +90,8 @@ npm run build
 | `NEXT_PUBLIC_SUPABASE_URL`      | client + serveur  | URL du projet Supabase                                   |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | client + serveur  | Clé anon (auth uniquement)                               |
 | `SUPABASE_SERVICE_ROLE_KEY`     | **serveur seul**  | Clé service role, jamais exposée au navigateur           |
+| `ADMIN_PASSWORD`                | **serveur seul**  | Mot de passe de `/admin`                                 |
+| `ADMIN_SESSION_SECRET`          | **serveur seul**  | Secret aléatoire (≥ 32 caractères) signant le cookie de session — `openssl rand -base64 32` |
 | `NEXT_PUBLIC_SITE_URL`          | client + serveur  | Base des liens publics / QR, ex. `https://verify.mondomaine.com` (sans `/` final) |
 
 ⚠️ Les QR codes encodent `NEXT_PUBLIC_SITE_URL` : définissez-la avec votre
@@ -104,7 +114,7 @@ git push -u origin main
 
 1. <https://vercel.com/new> → *Import* votre dépôt GitHub. Framework détecté :
    Next.js, aucune option à changer.
-2. **Environment Variables** : ajoutez les 4 variables ci-dessus
+2. **Environment Variables** : ajoutez les 6 variables ci-dessus
    (Production + Preview). `NEXT_PUBLIC_SITE_URL` = votre domaine final.
 3. *Deploy*. Vercel exécute `npm install` puis `npm run build`.
 4. Après tout changement de variable d'environnement, relancez un déploiement
@@ -124,7 +134,7 @@ git push -u origin main
 
 ## 7. Utilisation
 
-1. Ouvrez `/admin`, connectez-vous.
+1. Ouvrez `/admin`, saisissez le mot de passe. *Déconnexion* supprime la session.
 2. Choisissez une image → l'aperçu s'affiche → *Enregistrer le document*.
 3. Dans la liste : *Copier le lien*, *Télécharger le QR* (PNG 1000 × 1000,
    fond transparent), *Remplacer l'image* (le lien et le QR restent
@@ -137,7 +147,7 @@ git push -u origin main
 ├── app/
 │   ├── admin/
 │   │   ├── actions.ts          # Server Actions : login, logout, upload, remplacer, supprimer
-│   │   ├── login/page.tsx      # Page de connexion
+│   │   ├── login/page.tsx      # Page de connexion (mot de passe seul)
 │   │   └── page.tsx            # Liste + formulaire (Server Component)
 │   ├── v/[code]/
 │   │   ├── not-found.tsx       # "Document introuvable"
@@ -154,6 +164,9 @@ git push -u origin main
 │   ├── UploadForm.tsx          # Upload avec aperçu et validation client
 │   └── ui.tsx                  # Button, ErrorText
 ├── lib/
+│   ├── admin-auth.ts           # createAdminSession / verifyAdminSession / destroyAdminSession / requireAdmin
+│   ├── admin-session-token.ts  # Jeton HMAC-SHA256 (Web Crypto, partagé avec proxy.ts)
+│   ├── login-rate-limit.ts     # Délai progressif + blocage après 5 échecs
 │   ├── codes.ts                # Génération / validation des codes
 │   ├── documents.ts            # Accès données (server-only)
 │   ├── env.ts                  # Lecture des variables d'environnement
@@ -161,15 +174,13 @@ git push -u origin main
 │   ├── site.ts                 # Bucket + construction des URL publiques
 │   ├── validation.ts           # Taille, MIME, magic bytes
 │   └── supabase/
-│       ├── admin.ts            # Client service role (server-only)
-│       ├── client.ts           # Client navigateur (anon, auth)
-│       └── server.ts           # Client serveur lié aux cookies
+│       └── admin.ts            # Client service role (server-only)
 ├── supabase/
 │   └── schema.sql              # Table, index, trigger, RLS, bucket
 ├── types/
 │   └── document.ts
 ├── public/
-├── proxy.ts                    # Protection de /admin (ex-middleware)
+├── proxy.ts                    # Vérifie le cookie de session sur /admin (ex-middleware)
 ├── next.config.ts              # remotePatterns Supabase, limite upload 20 MB
 ├── postcss.config.mjs
 ├── eslint.config.mjs

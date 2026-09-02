@@ -3,6 +3,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { STORAGE_BUCKET, buildPublicUrl } from "@/lib/site";
 import { isValidVerificationCode } from "@/lib/codes";
+import { verifyAdminSession } from "@/lib/admin-auth";
 import type { AdminDocument, DocumentRow } from "@/types/document";
 
 const SIGNED_URL_TTL_SECONDS = 60 * 60; // 1 heure
@@ -31,8 +32,9 @@ export async function getPublicImageUrl(code: string): Promise<string | null> {
   return signed.signedUrl;
 }
 
-/** Admin : liste complète avec miniatures signées. */
+/** Admin : liste complète avec miniatures signées. Session vérifiée ici aussi. */
 export async function listDocumentsForAdmin(): Promise<AdminDocument[]> {
+  if (!(await verifyAdminSession())) throw new Error("Non autorisé.");
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("documents")

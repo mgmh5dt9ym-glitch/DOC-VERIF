@@ -10,21 +10,12 @@ export function LoginForm() {
   return (
     <form action={action} className="space-y-4">
       <label className="block">
-        <span className="text-sm">E-mail</span>
-        <input
-          name="email"
-          type="email"
-          autoComplete="username"
-          required
-          className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none"
-        />
-      </label>
-      <label className="block">
         <span className="text-sm">Mot de passe</span>
         <input
           name="password"
           type="password"
           autoComplete="current-password"
+          autoFocus
           required
           className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
@@ -34,7 +25,7 @@ export function LoginForm() {
           {state.error}
         </p>
       )}
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button type="submit" variant="primary" disabled={pending} className="w-full">
         {pending ? "Connexion…" : "Se connecter"}
       </Button>
     </form>
