@@ -1,7 +1,5 @@
 /**
  * Accès centralisé aux variables d'environnement.
- * Les fonctions sont appelées à l'exécution (pas à l'import) pour que
- * `next build` fonctionne même sans variables définies.
  */
 
 function required(name: string): string {
@@ -27,7 +25,16 @@ export function getSupabaseServiceRoleKey(): string {
   return required("SUPABASE_SERVICE_ROLE_KEY");
 }
 
+/**
+ * Retourne toujours uniquement l'origine du site, sans chemin.
+ * Ex.: https://docverif.vercel.app/admin/login -> https://docverif.vercel.app
+ */
 export function getSiteUrl(): string {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-  return raw.replace(/\/+$/, "");
+  const raw = process.env.NEXT_PUBLIC_SITE_URL || "https://docverif.vercel.app";
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "https://docverif.vercel.app";
+  }
 }

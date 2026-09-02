@@ -8,6 +8,7 @@ import { Button, ErrorText } from "@/components/admin/ui";
 import type { AdminDocument } from "@/types/document";
 
 export function DocumentCard({ doc }: { doc: AdminDocument }) {
+  const publicUrl = `https://docverif.vercel.app/v/${encodeURIComponent(doc.verification_code)}`;
   const [qrPreview, setQrPreview] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [replaceState, replaceAction, replacing] = useActionState(replaceImageAction, null);
@@ -19,26 +20,26 @@ export function DocumentCard({ doc }: { doc: AdminDocument }) {
 
   useEffect(() => {
     let cancelled = false;
-    qrPreviewDataUrl(doc.public_url).then((url) => {
+    qrPreviewDataUrl(publicUrl).then((url) => {
       if (!cancelled) setQrPreview(url);
     });
     return () => {
       cancelled = true;
     };
-  }, [doc.public_url]);
+  }, [publicUrl]);
 
   async function copyLink() {
     try {
-      await navigator.clipboard.writeText(doc.public_url);
+      await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      window.prompt("Copiez le lien :", doc.public_url);
+      window.prompt("Copiez le lien :", publicUrl);
     }
   }
 
   async function downloadQr() {
-    const dataUrl = await qrDownloadDataUrl(doc.public_url);
+    const dataUrl = await qrDownloadDataUrl(publicUrl);
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = `qr-${doc.verification_code}.png`;
@@ -74,7 +75,7 @@ export function DocumentCard({ doc }: { doc: AdminDocument }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         {/* Miniature */}
         <a
-          href={doc.public_url}
+          href={publicUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas sm:w-32"
@@ -96,12 +97,12 @@ export function DocumentCard({ doc }: { doc: AdminDocument }) {
         {/* Lien + actions */}
         <div className="min-w-0 flex-1">
           <a
-            href={doc.public_url}
+            href={publicUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="block truncate font-medium text-accent hover:underline"
           >
-            {doc.public_url}
+            {publicUrl}
           </a>
           <p className="mt-0.5 text-xs text-ink-soft">
             Code {doc.verification_code}
