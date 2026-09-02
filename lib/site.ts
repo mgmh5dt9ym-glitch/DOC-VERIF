@@ -1,6 +1,19 @@
 export const STORAGE_BUCKET = "documents";
-export const PUBLIC_SITE_ORIGIN = "https://docverif.vercel.app";
+
+export function getPublicSiteOrigin(): string {
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    "https://docverif.vercel.app";
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return "https://docverif.vercel.app";
+  }
+}
 
 export function buildPublicUrl(code: string): string {
-  return `${PUBLIC_SITE_ORIGIN}/v/${encodeURIComponent(String(code).trim())}`;
+  const cleanCode = String(code).trim();
+
+  return `${getPublicSiteOrigin()}/v/${encodeURIComponent(cleanCode)}`;
 }
