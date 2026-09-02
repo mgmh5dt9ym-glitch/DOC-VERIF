@@ -72,3 +72,20 @@ on conflict (id) do update set
 -- Aucune politique storage.objects pour anon / authenticated :
 -- les fichiers ne sont accessibles que via les URL signées générées
 -- côté serveur (service role). Rien à ajouter.
+
+-- 6. Identité visuelle de la page publique -------------------------
+create table if not exists public.site_branding (
+  id          smallint primary key,
+  header_path text,
+  logo_path   text,
+  status_text text not null default 'FIRMADO - VIGENTE',
+  updated_at  timestamptz not null default now(),
+  constraint site_branding_singleton check (id = 1)
+);
+
+alter table public.site_branding enable row level security;
+revoke all on table public.site_branding from anon, authenticated;
+
+insert into public.site_branding (id, status_text)
+values (1, 'FIRMADO - VIGENTE')
+on conflict (id) do nothing;

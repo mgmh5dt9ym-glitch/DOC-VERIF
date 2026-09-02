@@ -189,3 +189,21 @@ git push -u origin main
 ├── .env.example
 └── .gitignore
 ```
+
+## Upgrade visuel de la page de vérification
+
+La page publique `/v/[code]` utilise maintenant une présentation avec :
+- barre header personnalisable ;
+- logo centré ;
+- bande verte avec le texte `FIRMADO - VIGENTE` ;
+- document centré sous le statut.
+
+### À faire une seule fois sur un projet Supabase déjà existant
+
+Exécuter le fichier :
+
+`supabase/branding-upgrade.sql`
+
+dans **Supabase > SQL Editor > New query > Run**.
+
+Ensuite, dans `/admin`, utiliser la section **Identité de la page de vérification** pour téléverser le header et le logo.

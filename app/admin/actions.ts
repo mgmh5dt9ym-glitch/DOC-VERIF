@@ -236,3 +236,86 @@ export async function deleteDocumentAction(id: string): Promise<ActionResult> {
     return { ok: false, error: friendlyError(e) };
   }
 }
+
+/* ---------- Apparence de la page publique ---------- */
+
+export async function updateBrandingAction(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+
+    const headerFile = formData.get("header");
+    const logoFile = formData.get("logo");
+    const statusText = String(formData.get("status_text") ?? "FIRMADO - VIGENTE")
+      .trim()
+      .slice(0, 80) || "FIRMADO - VIGENTE";
+
+    const supabase = createAdminClient();
+    const { data: existing } = await supabase
+      .from("site_branding")
+      .select("header_path, logo_path")
+      .eq("id", 1)
+      .maybeSingle();
+
+    let headerPath = existing?.header_path ?? null;
+    let logoPath = existing?.logo_path ?? null;
+    const oldPaths: string[] = [];
+
+    if (headerFile instanceof File && headerFile.size > 0) {
+      const checked = await validateUpload(headerFile);
+      if (!checked.ok) return { ok: false, error: `Header : ${checked.error}` };
+
+      const newPath = `branding/header-${crypto.randomUUID()}.${checked.extension}`;
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(newPath, checked.buffer, {
+          contentType: checked.mime,
+          cacheControl: "3600",
+          upsert: false,
+        });
+      if (error) return { ok: false, error: `Échec de l’envoi du header : ${error.message}` };
+      if (headerPath) oldPaths.push(headerPath);
+      headerPath = newPath;
+    }
+
+    if (logoFile instanceof File && logoFile.size > 0) {
+      const checked = await validateUpload(logoFile);
+      if (!checked.ok) return { ok: false, error: `Logo : ${checked.error}` };
+
+      const newPath = `branding/logo-${crypto.randomUUID()}.${checked.extension}`;
+      const { error } = await supabase.storage
+        .from(STORAGE_BUCKET)
+        .upload(newPath, checked.buffer, {
+          contentType: checked.mime,
+          cacheControl: "3600",
+          upsert: false,
+        });
+      if (error) return { ok: false, error: `Échec de l’envoi du logo : ${error.message}` };
+      if (logoPath) oldPaths.push(logoPath);
+      logoPath = newPath;
+    }
+
+    const { error: dbError } = await supabase
+      .from("site_branding")
+      .upsert({
+        id: 1,
+        header_path: headerPath,
+        logo_path: logoPath,
+        status_text: statusText,
+      });
+
+    if (dbError) return { ok: false, error: `Erreur base de données : ${dbError.message}` };
+
+    if (oldPaths.length > 0) {
+      await supabase.storage.from(STORAGE_BUCKET).remove(oldPaths);
+    }
+
+    revalidatePath("/admin");
+    revalidatePath("/v/[code]", "page");
+    return { ok: true, message: "Apparence enregistrée." };
+  } catch (e) {
+    return { ok: false, error: friendlyError(e) };
+  }
+}

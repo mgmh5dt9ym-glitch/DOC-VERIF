@@ -1,22 +1,31 @@
 import { requireAdmin } from "@/lib/admin-auth";
 import { listDocumentsForAdmin } from "@/lib/documents";
+import { getBrandingForAdmin } from "@/lib/branding";
 import { logoutAction } from "@/app/admin/actions";
 import { UploadForm } from "@/components/admin/UploadForm";
 import { DocumentList } from "@/components/admin/DocumentList";
+import { BrandingForm } from "@/components/admin/BrandingForm";
 import type { AdminDocument } from "@/types/document";
 
 export const metadata = { title: "Documents — Admin" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  // Vérification serveur de la session avant tout chargement de données.
   await requireAdmin();
 
   let documents: AdminDocument[] = [];
   let loadError: string | null = null;
+  let branding = {
+    header_url: null as string | null,
+    logo_url: null as string | null,
+    status_text: "FIRMADO - VIGENTE",
+  };
 
   try {
-    documents = await listDocumentsForAdmin();
+    [documents, branding] = await Promise.all([
+      listDocumentsForAdmin(),
+      getBrandingForAdmin(),
+    ]);
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Connexion à Supabase impossible.";
   }
@@ -41,6 +50,10 @@ export default async function AdminPage() {
           </button>
         </form>
       </header>
+
+      <section className="mt-8">
+        <BrandingForm branding={branding} />
+      </section>
 
       <section className="mt-8">
         <UploadForm />
