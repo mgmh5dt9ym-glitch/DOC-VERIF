@@ -215,11 +215,10 @@ textarea {
 
   .verification-document-zone {
     width: 100%;
-    height: 464px;
-    min-height: 464px;
+    height: auto;
+    min-height: 0;
     padding: 0;
-    align-items: stretch;
-    justify-content: stretch;
+    display: block;
     background: #ffffff;
     overflow: hidden;
   }
@@ -227,11 +226,11 @@ textarea {
   .verification-document {
     display: block;
     width: 100%;
-    max-width: none;
-    height: 100%;
+    max-width: 100%;
+    height: auto;
     max-height: none;
     margin: 0;
-    object-fit: fill;
+    object-fit: contain;
     object-position: center;
   }
 }
