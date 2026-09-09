@@ -51,8 +51,8 @@ export function UploadForm() {
   }
 
   return (
-    <form action={action} className="rounded-lg border border-line bg-white p-5">
-      <div className="flex flex-col gap-5 sm:flex-row">
+    <form action={action} className="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:gap-5">
         <div className="flex-1">
           <h2 className="font-medium">Ajouter un document</h2>
           <p className="mt-1 text-sm text-ink-soft">
@@ -60,7 +60,7 @@ export function UploadForm() {
             seront créés automatiquement.
           </p>
 
-          <label className="mt-4 block">
+          <label className="mt-4 block overflow-hidden">
             <span className="sr-only">Fichier image</span>
             <input
               ref={inputRef}
@@ -69,12 +69,12 @@ export function UploadForm() {
               accept={ACCEPT_ATTRIBUTE}
               required
               onChange={onFileChange}
-              className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink hover:file:border-ink-soft"
+              className="block w-full overflow-hidden text-sm text-ink-soft file:mr-2 file:min-h-11 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink hover:file:border-ink-soft sm:file:mr-3"
             />
           </label>
 
-          <div className="mt-4 flex items-center gap-3">
-            <Button type="submit" variant="primary" disabled={pending || !preview || !!clientError}>
+          <div className="mt-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+            <Button type="submit" variant="primary" disabled={pending || !preview || !!clientError} className="w-full sm:w-auto">
               {pending ? "Envoi en cours…" : "Enregistrer le document"}
             </Button>
             {state?.ok && !pending && (
@@ -88,7 +88,7 @@ export function UploadForm() {
           </div>
         </div>
 
-        <div className="flex w-full shrink-0 items-center justify-center rounded-md border border-dashed border-line bg-canvas sm:w-56">
+        <div className="flex min-h-44 w-full shrink-0 items-center justify-center rounded-lg border border-dashed border-line bg-canvas sm:min-h-0 sm:w-56">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img

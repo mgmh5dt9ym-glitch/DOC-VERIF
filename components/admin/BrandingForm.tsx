@@ -32,7 +32,7 @@ export function BrandingForm({ branding }: { branding: VerificationBranding }) {
   }
 
   return (
-    <form action={action} className="rounded-lg border border-line bg-white p-5">
+    <form action={action} className="rounded-xl border border-line bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold">Identité de la page de vérification</h2>
         <p className="text-sm text-ink-soft">
@@ -40,14 +40,14 @@ export function BrandingForm({ branding }: { branding: VerificationBranding }) {
         </p>
       </div>
 
-      <div className="mt-5 grid gap-5 md:grid-cols-2">
+      <div className="mt-4 grid gap-4 sm:mt-5 md:grid-cols-2 md:gap-5">
         <label className="block">
           <span className="mb-2 block text-sm font-medium">Barre header</span>
           <input
             type="file"
             name="header"
             accept={ACCEPT_ATTRIBUTE}
-            className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink"
+            className="block w-full overflow-hidden text-sm text-ink-soft file:mr-2 file:min-h-11 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink sm:file:mr-3"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) previewFile(file, "header");
@@ -69,7 +69,7 @@ export function BrandingForm({ branding }: { branding: VerificationBranding }) {
             type="file"
             name="logo"
             accept={ACCEPT_ATTRIBUTE}
-            className="block w-full text-sm text-ink-soft file:mr-3 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink"
+            className="block w-full overflow-hidden text-sm text-ink-soft file:mr-2 file:min-h-11 file:rounded-md file:border file:border-line file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink sm:file:mr-3"
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) previewFile(file, "logo");
@@ -86,19 +86,19 @@ export function BrandingForm({ branding }: { branding: VerificationBranding }) {
         </label>
       </div>
 
-      <label className="mt-5 block max-w-md">
+      <label className="mt-4 block max-w-md sm:mt-5">
         <span className="mb-2 block text-sm font-medium">Texte de statut</span>
         <input
           name="status_text"
           type="text"
           defaultValue={branding.status_text || "FIRMADO - VIGENTE"}
           maxLength={80}
-          className="w-full rounded-md border border-line bg-white px-3 py-2 text-sm outline-none focus:border-accent"
+          className="min-h-11 w-full rounded-md border border-line bg-white px-3 py-2 text-base outline-none focus:border-accent sm:text-sm"
         />
       </label>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <Button type="submit" variant="primary" disabled={pending}>
+      <div className="mt-4 flex flex-col items-stretch gap-3 sm:mt-5 sm:flex-row sm:flex-wrap sm:items-center">
+        <Button type="submit" variant="primary" disabled={pending} className="w-full sm:w-auto">
           {pending ? "Enregistrement…" : "Enregistrer l’apparence"}
         </Button>
         {state?.ok && <p className="text-sm text-ink-soft">{state.message}</p>}

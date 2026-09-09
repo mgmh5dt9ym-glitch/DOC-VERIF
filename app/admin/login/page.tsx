@@ -9,8 +9,8 @@ export default async function LoginPage() {
   if (await verifyAdminSession()) redirect("/admin");
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-sm">
+    <main className="flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6">
+      <div className="w-full max-w-sm rounded-xl border border-line bg-white p-5 shadow-sm sm:p-6">
         <h1 className="text-xl font-semibold">Espace administrateur</h1>
         <p className="mt-1 text-sm text-ink-soft">
           Saisissez le mot de passe pour gérer les documents.

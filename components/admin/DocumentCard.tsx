@@ -21,9 +21,6 @@ export function DocumentCard({ doc }: { doc: AdminDocument }) {
 
   useEffect(() => {
     let cancelled = false;
-
-    // Recalcule le lien depuis le domaine réellement ouvert dans le navigateur.
-    // Ainsi, un changement de domaine met automatiquement à jour le lien et le QR.
     const currentPublicUrl = buildPublicUrl(doc.verification_code);
     setPublicUrl(currentPublicUrl);
 
@@ -79,86 +76,80 @@ export function DocumentCard({ doc }: { doc: AdminDocument }) {
   }
 
   return (
-    <article className="rounded-lg border border-line bg-white p-4">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {/* Miniature */}
+    <article className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-stretch">
         <a
           href={publicUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas sm:w-32"
+          className="flex h-56 w-full shrink-0 items-center justify-center overflow-hidden border-b border-line bg-canvas sm:h-auto sm:min-h-52 sm:w-44 sm:border-b-0 sm:border-r"
           title="Ouvrir la page publique"
         >
           {doc.thumbnail_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={doc.thumbnail_url}
-              alt=""
-              className="h-full w-full object-contain"
-              loading="lazy"
-            />
+            <img src={doc.thumbnail_url} alt="" className="h-full w-full object-contain p-2" loading="lazy" />
           ) : (
             <span className="text-xs text-ink-soft">Aperçu indisponible</span>
           )}
         </a>
 
-        {/* Lien + actions */}
-        <div className="min-w-0 flex-1">
-          <a
-            href={publicUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block truncate font-medium text-accent hover:underline"
-          >
-            {publicUrl}
-          </a>
-          <p className="mt-0.5 text-xs text-ink-soft">
-            Code {doc.verification_code}
-          </p>
+        <div className="min-w-0 flex-1 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block break-all text-sm font-medium leading-5 text-accent hover:underline sm:text-base"
+              >
+                {publicUrl}
+              </a>
+              <p className="mt-1 text-xs text-ink-soft">Code {doc.verification_code}</p>
+            </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={copyLink}>{copied ? "Lien copié" : "Copier le lien"}</Button>
-            <Button onClick={downloadQr}>Télécharger le QR</Button>
-            <Button
-              onClick={() => replaceInputRef.current?.click()}
-              disabled={replacing}
-            >
+            <div className="hidden h-24 w-24 shrink-0 items-center justify-center rounded-lg border border-line bg-white p-1.5 sm:flex">
+              {qrPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrPreview} alt={`QR code ${doc.verification_code}`} className="h-full w-full" />
+              ) : (
+                <span className="text-xs text-ink-soft">QR…</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-4 flex justify-center sm:hidden">
+            <div className="flex h-36 w-36 items-center justify-center rounded-xl border border-line bg-white p-2 shadow-sm">
+              {qrPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrPreview} alt={`QR code ${doc.verification_code}`} className="h-full w-full" />
+              ) : (
+                <span className="text-xs text-ink-soft">QR…</span>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+            <Button onClick={copyLink} className="w-full sm:w-auto">{copied ? "Lien copié" : "Copier le lien"}</Button>
+            <Button onClick={downloadQr} className="w-full sm:w-auto">Télécharger le QR</Button>
+            <Button onClick={() => replaceInputRef.current?.click()} disabled={replacing} className="w-full sm:w-auto">
               {replacing ? "Remplacement…" : "Remplacer l’image"}
             </Button>
-            <Button variant="danger" onClick={onDelete} disabled={deleting}>
+            <Button variant="danger" onClick={onDelete} disabled={deleting} className="w-full sm:w-auto">
               {deleting ? "Suppression…" : "Supprimer"}
             </Button>
           </div>
 
           <form ref={replaceFormRef} action={replaceAction} className="hidden">
             <input type="hidden" name="id" value={doc.id} />
-            <input
-              ref={replaceInputRef}
-              type="file"
-              name="file"
-              accept={ACCEPT_ATTRIBUTE}
-              onChange={onReplaceFileChosen}
-            />
+            <input ref={replaceInputRef} type="file" name="file" accept={ACCEPT_ATTRIBUTE} onChange={onReplaceFileChosen} />
           </form>
 
           <div className="mt-3 space-y-2">
             {replaceClientError && <ErrorText>{replaceClientError}</ErrorText>}
             {replaceState && !replaceState.ok && <ErrorText>{replaceState.error}</ErrorText>}
-            {replaceState?.ok && !replacing && (
-              <p className="text-sm text-ink-soft">{replaceState.message}</p>
-            )}
+            {replaceState?.ok && !replacing && <p className="text-sm text-ink-soft">{replaceState.message}</p>}
             {deleteError && <ErrorText>{deleteError}</ErrorText>}
           </div>
-        </div>
-
-        {/* QR */}
-        <div className="flex h-28 w-28 shrink-0 items-center justify-center self-center rounded-md bg-white sm:self-start">
-          {qrPreview ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrPreview} alt={`QR code ${doc.verification_code}`} className="h-full w-full" />
-          ) : (
-            <span className="text-xs text-ink-soft">QR…</span>
-          )}
         </div>
       </div>
     </article>

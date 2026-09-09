@@ -17,7 +17,7 @@ export function LoginForm() {
           autoComplete="current-password"
           autoFocus
           required
-          className="mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          className="mt-1 min-h-12 w-full rounded-md border border-line bg-white px-3 py-2 text-base focus:border-accent focus:outline-none"
         />
       </label>
       {state && !state.ok && (
